@@ -1,0 +1,2 @@
+hyundai-kia-connect-api>=4.38.1
+mcp>=2.3.0,<3
