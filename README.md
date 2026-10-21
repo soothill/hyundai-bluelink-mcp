@@ -32,6 +32,7 @@ Prefer the `_FILE` variants so credentials never appear in `docker inspect`, pro
 env, or shell history — e.g. mount a secrets volume and set
 `BLUELINK_PASSWORD_FILE=/run/secrets/bluelink_password`.
 | `BLUELINK_REGION` | `1` | 1=EU 2=CA 3=US 4=CN 5=AU 6=IN 7=NZ 8=BR |
+- `BLUELINK_UNIT` — `1` (default, km) or `2`/`mi` to report all distances in miles.
 | `BLUELINK_BRAND` | `2` | 1=Kia 2=Hyundai 3=Genesis |
 | `BLUELINK_MCP_TRANSPORT` | `streamable-http` | or `stdio` |
 | `BLUELINK_MCP_HOST` / `BLUELINK_MCP_PORT` | `0.0.0.0` / `8080` | HTTP transport bind |

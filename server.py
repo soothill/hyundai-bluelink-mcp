@@ -8,6 +8,7 @@ Credentials via environment:
   BLUELINK_USERNAME / BLUELINK_PASSWORD  (required)
   BLUELINK_PIN       (default ""; required for CA, maybe USA)
   BLUELINK_REGION    (default 1 = EU)   BLUELINK_BRAND (default 2 = Hyundai)
+  BLUELINK_UNIT      (default 1 = km; 2/3/mi = report distances in miles)
 Transport:
   BLUELINK_MCP_TRANSPORT = "streamable-http" (default) | "stdio"
   BLUELINK_MCP_HOST (default 0.0.0.0)  BLUELINK_MCP_PORT (default 8080)
@@ -53,6 +54,54 @@ mcp = MCPServer(
 _vm: VehicleManager | None = None
 _vm_lock = threading.Lock()
 _otp_state: dict = {}
+
+# ------------------------------------------------------------------- units
+# BLUELINK_UNIT: 1 = metric/km (default), 2 or 3 / "mi" = imperial/miles.
+# When miles are requested, every km-denominated field in tool output is
+# converted (x0.621371) and unit labels rewritten; durations, percentages,
+# temperatures and energy values are left untouched.
+_UNIT = os.environ.get("BLUELINK_UNIT", "1").strip().lower()
+MILES = _UNIT in ("2", "3", "mi", "mile", "miles", "imperial")
+KM_TO_MI = 0.621371192237334
+
+
+def _km_to_mi(value):
+    return round(value * KM_TO_MI, 1)
+
+
+def _is_num(v):
+    return isinstance(v, (int, float)) and not isinstance(v, bool)
+
+
+def _apply_units(obj):
+    """Recursively convert known km fields to miles (in place)."""
+    if not MILES:
+        return obj
+    if isinstance(obj, dict):
+        for k, v in list(obj.items()):
+            if k in ("distance", "odometer", "Odometer", "total_distance") and _is_num(v):
+                obj[k] = _km_to_mi(v)
+            elif k in ("distance_unit", "odometer_unit") and isinstance(v, str) and v.lower() in ("km", "kms"):
+                obj[k] = "mi" if k == "distance_unit" else "mile"
+            elif k == "DTE":
+                if _is_num(v):
+                    obj[k] = _km_to_mi(v)
+                elif isinstance(v, dict):
+                    for kk, vv in list(v.items()):
+                        if _is_num(vv) and kk not in ("Unit", "SoC", "RemainTime"):
+                            v[kk] = _km_to_mi(vv)
+                        elif isinstance(vv, dict):
+                            for k3, v3 in list(vv.items()):
+                                if _is_num(v3) and k3 not in ("Unit", "SoC", "RemainTime"):
+                                    vv[k3] = _km_to_mi(v3)
+            else:
+                _apply_units(v)
+    elif isinstance(obj, list):
+        for item in obj:
+            _apply_units(item)
+    return obj
+
+
 
 
 # ----------------------------------------------------------------- plumbing
@@ -137,7 +186,7 @@ def _serialize_vehicle(vehicle) -> dict:
         if callable(value):
             continue
         out[name] = _jsonable(value)
-    return out
+    return _apply_units(out)
 
 
 def _run(fn, *args, **kwargs):
@@ -433,7 +482,7 @@ async def bluelink_month_trip_info(yyyymm: str, vehicle_id: str | None = None) -
     vm = await _run(_get_vm)
     vid = _vehicle_id(vm, vehicle_id)
     await _run(vm.update_month_trip_info, vid, yyyymm)
-    return json.dumps(_jsonable(vm.get_vehicle(vid).month_trip_info), indent=2)
+    return json.dumps(_apply_units(_jsonable(vm.get_vehicle(vid).month_trip_info)), indent=2)
 
 
 @mcp.tool(description="Daily trip stats for 'YYYY-MM-DD'.")
@@ -441,7 +490,7 @@ async def bluelink_day_trip_info(yyyymmdd: str, vehicle_id: str | None = None) -
     vm = await _run(_get_vm)
     vid = _vehicle_id(vm, vehicle_id)
     await _run(vm.update_day_trip_info, vid, yyyymmdd)
-    return json.dumps(_jsonable(vm.get_vehicle(vid).day_trip_info), indent=2)
+    return json.dumps(_apply_units(_jsonable(vm.get_vehicle(vid).day_trip_info)), indent=2)
 
 
 @mcp.tool(description="Latest surround-view (SVM) camera capture metadata.")
