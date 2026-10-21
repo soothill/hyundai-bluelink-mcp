@@ -23,7 +23,14 @@ Ships as a Docker container speaking **streamable-http** (default, port 8080) or
 |---|---|---|
 | `BLUELINK_USERNAME` | — | Bluelink account email |
 | `BLUELINK_PASSWORD` | — | Bluelink account password |
+| `BLUELINK_USERNAME_FILE` | — | **Preferred:** read username from this file instead of the env value |
+| `BLUELINK_PASSWORD_FILE` | — | **Preferred:** read password from this file (Docker `_FILE` convention) |
+| `BLUELINK_PIN_FILE` | — | Same, for the PIN |
 | `BLUELINK_PIN` | `` | Required for Canada, maybe USA |
+
+Prefer the `_FILE` variants so credentials never appear in `docker inspect`, process
+env, or shell history — e.g. mount a secrets volume and set
+`BLUELINK_PASSWORD_FILE=/run/secrets/bluelink_password`.
 | `BLUELINK_REGION` | `1` | 1=EU 2=CA 3=US 4=CN 5=AU 6=IN 7=NZ 8=BR |
 | `BLUELINK_BRAND` | `2` | 1=Kia 2=Hyundai 3=Genesis |
 | `BLUELINK_MCP_TRANSPORT` | `streamable-http` | or `stdio` |

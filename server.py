@@ -57,6 +57,24 @@ _otp_state: dict = {}
 
 # ----------------------------------------------------------------- plumbing
 
+def _cred(name: str) -> str | None:
+    """Read a credential: NAME_FILE (secret file, docker _FILE convention) wins over NAME."""
+    path = os.environ.get(name + "_FILE")
+    if path:
+        with open(path) as fh:
+            return fh.read().strip()
+    return os.environ.get(name)
+
+
+def _require(name: str) -> str:
+    value = _cred(name)
+    if not value:
+        raise RuntimeError(
+            f"{name} (or {name}_FILE) is not configured."
+        )
+    return value
+
+
 def _get_vm() -> VehicleManager:
     global _vm
     with _vm_lock:
