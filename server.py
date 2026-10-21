@@ -82,9 +82,9 @@ def _get_vm() -> VehicleManager:
             vm = VehicleManager(
                 region=int(os.environ.get("BLUELINK_REGION", "1")),
                 brand=int(os.environ.get("BLUELINK_BRAND", "2")),
-                username=os.environ["BLUELINK_USERNAME"],
-                password=os.environ["BLUELINK_PASSWORD"],
-                pin=os.environ.get("BLUELINK_PIN", ""),
+                username=_require("BLUELINK_USERNAME"),
+                password=_require("BLUELINK_PASSWORD"),
+                pin=_cred("BLUELINK_PIN") or "",
             )
             result = vm.login()
             if isinstance(result, bool) and result:
